@@ -23,7 +23,7 @@ module.exports = class TicketCompleter extends Autocompleter {
 	}) {
 		/** @type {import("client")} */
 		const client = this.client;
-		const cacheKey = [guildId, userId, open].join('/');
+		const cacheKey = [guildId, open].join('/');
 
 		let tickets = await this.cache.get(cacheKey);
 
@@ -50,7 +50,7 @@ module.exports = class TicketCompleter extends Autocompleter {
 				const date = new Date(ticket.createdAt).toLocaleString([locale, 'en-GB'], { dateStyle: 'short' });
 				const topic = ticket.topic ? '- ' + decrypt(ticket.topic).replace(/\n/g, ' ').substring(0, 50) : '';
 				const category = emoji.hasEmoji(ticket.category.emoji) ? emoji.get(ticket.category.emoji) + ' ' + ticket.category.name : ticket.category.name;
-				ticket._name = `${category} #${ticket.number} (${date}) ${topic}`;
+				ticket._name = `${category} #${ticket.number}`;
 				return ticket;
 			});
 			this.cache.set(cacheKey, tickets, ms('1m'));
@@ -60,7 +60,7 @@ module.exports = class TicketCompleter extends Autocompleter {
 		return options
 			.slice(0, 25)
 			.map(t => ({
-				name: t._name,
+				name: `${t._name} (${date}) | ${topic}`,
 				value: t.id,
 			}));
 	}
