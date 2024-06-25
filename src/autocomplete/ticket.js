@@ -20,7 +20,6 @@ module.exports = class TicketCompleter extends Autocompleter {
 	async getOptions(value, {
 		guildId,
 		open,
-		userId,
 	}) {
 		/** @type {import("client")} */
 		const client = this.client;
@@ -43,9 +42,8 @@ module.exports = class TicketCompleter extends Autocompleter {
 					},
 				},
 				where: {
-					createdById: userId,
 					guildId,
-					open,
+					// open, //commented for debugging purposes (I don't wanna close tickets)
 				},
 			});
 			tickets = tickets.map(ticket => {
@@ -74,12 +72,10 @@ module.exports = class TicketCompleter extends Autocompleter {
 	 */
 	async run(value, command, interaction) {
 		const otherMember = await isStaff(interaction.guild, interaction.user.id) && interaction.options.data[1]?.value;
-		const userId = otherMember || interaction.user.id;
 		await interaction.respond(
 			await this.getOptions(value, {
 				guildId: interaction.guild.id,
 				open: ['add', 'close', 'force-close', 'remove'].includes(command.name),  // false for `new`, `transcript` etc
-				userId,
 			}),
 		);
 	}
