@@ -43,6 +43,7 @@ module.exports = class TicketCompleter extends Autocompleter {
 				},
 				where: {
 					guildId,
+					// FIXME: Uncomment before opening a PR
 					// open, //commented for debugging purposes (I don't wanna close tickets)
 				},
 			});
@@ -71,7 +72,6 @@ module.exports = class TicketCompleter extends Autocompleter {
 	 * @param {import("discord.js").AutocompleteInteraction} interaction
 	 */
 	async run(value, command, interaction) {
-		const otherMember = await isStaff(interaction.guild, interaction.user.id) && interaction.options.data[1]?.value;
 		await interaction.respond(
 			await this.getOptions(value, {
 				guildId: interaction.guild.id,
