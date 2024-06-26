@@ -45,6 +45,8 @@ module.exports = class TicketCompleter extends Autocompleter {
 						},
 					},
 					archivedUsers: true,
+					archivedChannels: true,
+					// category: true,
 				},
 				where: {
 					guildId,
@@ -56,6 +58,7 @@ module.exports = class TicketCompleter extends Autocompleter {
 				ticket._date = new Date(ticket.createdAt).toLocaleString(['en-CA', locale, 'en-GB'], { dateStyle: 'short' });
 				ticket._topic = ticket.topic ? '| ' + decrypt(ticket.topic).replace(/\n/g, ' ').substring(0, 50) : '';
 				ticket._category = emoji.hasEmoji(ticket.category.emoji) ? emoji.get(ticket.category.emoji) + ' ' + ticket.category.name : ticket.category.name;
+				ticket._channelId = ticket.id;
 				ticket._name = `${ticket._category} #${ticket.number}`;
 				ticket._users = ticket.archivedUsers?.map(i => i.userId);
 				return ticket;
@@ -73,9 +76,9 @@ module.exports = class TicketCompleter extends Autocompleter {
 
 		let options = ticket ? tickets.filter(t => t._name.match(new RegExp(ticket, 'i'))) : tickets;
 		options = category ? options.filter(t => t._category.match(new RegExp(cateogry, 'i'))) : options;
-		options = channel ? options.filter(t => t._category.match(new RegExp(channel, 'i'))) : options;
+		options = channel ? options.filter(t => t._channelId.match(new RegExp(channel, 'i'))) : options;
 		options = user ? options.filter(t => t._users?.includes(user.value)) : options;
-		options = topic ? options.filter(t =>t._category.match(new RegExp(topic, 'i'))) : options;
+		options = topic ? options.filter(t =>t._topic.match(new RegExp(topic, 'i'))) : options;
 
 		return options
 			.slice(0, 25)

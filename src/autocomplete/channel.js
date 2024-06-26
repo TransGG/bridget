@@ -34,12 +34,7 @@ module.exports = class TicketCompleter extends Autocompleter {
 			});
 			tickets = await client.prisma.ticket.findMany({
 				include: {
-					category: {
-						select: {
-							emoji: true,
-							name: true,
-						},
-					},
+					category: true,
 				},
 				where: {
 					guildId,
@@ -48,21 +43,28 @@ module.exports = class TicketCompleter extends Autocompleter {
 				},
 			});
 			tickets = tickets.map(ticket => {
-				ticket._date = new Date(ticket.createdAt).toLocaleString([locale, 'en-GB'], { dateStyle: 'short' });
-				ticket._topic = ticket.topic ? '| ' + decrypt(ticket.topic).replace(/\n/g, ' ').substring(0, 50) : '';
-				ticket._category = emoji.hasEmoji(ticket.category.emoji) ? emoji.get(ticket.category.emoji) + ' ' + ticket.category.name : ticket.category.name;
-				ticket._name = `${ticket._category} #${ticket.number}`;
+				ticket._channelName = ticket.category.channelName
+					.replace(/{+\s?(user)?name\s?}+/gi, ticket.createdBy?.username)
+					.replace(/{+\s?(nick|display)(name)?\s?}+/gi, ticket.createdBy?.displayName)
+					.replace(/{+\s?num(ber)?\s?}+/gi, ticket.number);
+				ticket._channelId = ticket.id;
 				return ticket;
 			});
-			this.cache.set(cacheKey, tickets, ms('1m'));
+			// this.cache.set(cacheKey, tickets, ms('1m'));
 		}
 
-		const options = value ? tickets.filter(t => t._name.match(new RegExp(value, 'i'))) : tickets;
+		const options = value ?
+			tickets.filter(
+				t => t._channelId.match(new RegExp(value, 'i'))
+					|| t._channelName.match(new RegExp(value, 'i'))
+			)
+			: tickets;
+
 		return options
 			.slice(0, 25)
 			.map(t => ({
-				name: `${t._name} (${t._date}) ${t._topic}`,
-				value: t.id,
+				name: `#${t._channelName} (${t._channelId})`,
+				value: t._channelId,
 			}));
 	}
 

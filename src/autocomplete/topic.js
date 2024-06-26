@@ -26,12 +26,9 @@ module.exports = class TopicCompleter extends Autocompleter {
 		const cacheKey = [guildId, open].join('/');
 
 		let tickets = await this.cache.get(cacheKey);
+		let topics = [""];
 
 		if (!tickets) {
-			const { locale } = await client.prisma.guild.findUnique({
-				select: { locale: true },
-				where: { id: guildId },
-			});
 			tickets = await client.prisma.ticket.findMany({
 				include: {
 					category: {
@@ -39,6 +36,7 @@ module.exports = class TopicCompleter extends Autocompleter {
 							emoji: true,
 							name: true,
 						},
+
 					},
 				},
 				where: {
@@ -47,22 +45,21 @@ module.exports = class TopicCompleter extends Autocompleter {
 					// open, //commented for debugging purposes (I don't wanna close tickets)
 				},
 			});
-			tickets = tickets.map(ticket => {
-				ticket._date = new Date(ticket.createdAt).toLocaleString([locale, 'en-GB'], { dateStyle: 'short' });
-				ticket._topic = ticket.topic ? '- ' + decrypt(ticket.topic).replace(/\n/g, ' ').substring(0, 50) : '';
-				ticket._category = emoji.hasEmoji(ticket.category.emoji) ? emoji.get(ticket.category.emoji) + ' ' + ticket.category.name : ticket.category.name;
-				ticket._name = `${ticket._category} #${ticket.number}`;
-				return ticket;
+			topics = tickets.map(ticket => {
+				return ticket.topic ? decrypt(ticket.topic).replace(/\n/g, ' ').substring(0, 50) : null;
 			});
-			this.cache.set(cacheKey, tickets, ms('1m'));
+			// this.cache.set(cacheKey, tickets, ms('1m'));
 		}
 
-		const options = value ? tickets.filter(t => t._name.match(new RegExp(value, 'i'))) : tickets;
-		return options
+		const options = value ?
+			topics.filter(topic => topic && topic.match(new RegExp(value, 'i'))) :
+			topics.filter(topic => topic);
+
+		return options.filter((i, idx, arr) => arr.indexOf(i) == idx)
 			.slice(0, 25)
-			.map(t => ({
-				name: `${t._name} (${ticket._date}) | ${ticket._topic}`,
-				value: t.id,
+			.map(topic => ({
+				name: topic,
+				value: topic,
 			}));
 	}
 

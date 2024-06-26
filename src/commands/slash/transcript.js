@@ -44,7 +44,7 @@ module.exports = class TranscriptSlashCommand extends SlashCommand {
 					type: ApplicationCommandOptionType.User,
 				},
 				{
-					autofill: true,
+					autocomplete: true,
 					name: 'topic',
 					required: false,
 					type: ApplicationCommandOptionType.String
