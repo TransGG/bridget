@@ -526,7 +526,7 @@ module.exports = class TicketManager {
 
 		const pings = category.pingRoles.map(r => `<@&${r}>`).join(' ');
 		let sent;
-		if (referencesUser) {
+		if (referencesUser.id) {
 			sent = await channel.send({
 				components: components.components.length >= 1 ? [components] : [],
 				content: getMessage('ticket.references_user.content', {
