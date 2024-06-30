@@ -795,7 +795,8 @@ module.exports = class TicketManager {
 		const getMessage = this.client.i18n.getLocale(ticket.guild.locale);
 
 		if (!(await isStaff(interaction.guild, interaction.user.id))) { // if user is not staff
-			return await interaction.editReply({
+			return await interaction.reply({
+				ephemeral: true,
 				embeds: [
 					new ExtendedEmbedBuilder({
 						iconURL: interaction.guild.iconURL(),
@@ -807,6 +808,8 @@ module.exports = class TicketManager {
 				],
 			});
 		}
+
+		await interaction.deferReply({ ephemeral: false });
 
 		await Promise.all([
 			interaction.channel.permissionOverwrites.edit(interaction.user, { 'ViewChannel': true }, `Ticket claimed by ${interaction.user.tag}`),
