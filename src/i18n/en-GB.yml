@@ -147,6 +147,9 @@ commands:
       description: Create a new ticket
       name: new
       options:
+        category:
+          description: The category to create the ticket in
+          name: category
         user:
           description: The user to open a ticket with
           name: user

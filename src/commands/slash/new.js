@@ -45,7 +45,7 @@ module.exports = class NewSlashCommand extends SlashCommand {
 	async run(interaction) {
 		await useGuild(this.client, interaction, { 
 			referencesTicketId: interaction.options.getString('references', false),
-			referencesUser: interaction.options.getUser('user'),
+			referencesUserId: interaction.options.getUser('user')?.id,
 			topic: interaction.options.getString('topic'),
 		});
 	}

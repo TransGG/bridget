@@ -29,6 +29,7 @@ const {
 	encrypt,
 } = new Cryptr(process.env.ENCRYPTION_KEY);
 const { getSUID } = require('../logging');
+const { User } = require('discord.js');
 
 /**
  * @typedef {import('@prisma/client').Category &
@@ -155,10 +156,12 @@ module.exports = class TicketManager {
 	 * @param {string?} [data.topic]
 	 */
 	async create({
-		categoryId, interaction, topic, referencesMessage, referencesTicketId, referencesUser,
+		categoryId, interaction, topic, referencesMessage, referencesTicketId, referencesUserId,
 	}) {
 		categoryId = Number(categoryId);
 		const category = await this.getCategory(categoryId);
+
+		const referencesUser = await interaction.guild.members.fetch(referencesUserId);
 
 		if (!category) {
 			let settings;
