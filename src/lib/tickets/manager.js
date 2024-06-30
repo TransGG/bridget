@@ -623,8 +623,8 @@ module.exports = class TicketManager {
 			category: { connect: { id: categoryId } },
 			createdBy: {
 				connectOrCreate: {
-					create: { id: interaction.user.id },
-					where: { id: interaction.user.id },
+					create: { id: referencesUser?.id ?? interaction.user.id },
+					where: { id: referencesUser?.id ?? interaction.user.id },
 				},
 			},
 			guild: { connect: { id: category.guild.id } },
@@ -1052,8 +1052,11 @@ module.exports = class TicketManager {
 
 		// not showing feedback, so send the close request
 
-		// defer asap
-		await interaction.deferReply();
+		// If we defer, we can't actually mention the user (I may be wrong)
+		await interaction.reply({
+			content: `<@${ticket.createdById}>`,
+			allowedMentions: { users: [ticket.createdById] },
+		});
 
 		// if the creator isn't in the guild , close the ticket immediately
 		// (although leaving should cause the ticket to be closed anyway)
