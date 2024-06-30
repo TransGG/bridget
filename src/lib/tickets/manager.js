@@ -810,7 +810,7 @@ module.exports = class TicketManager {
 
 		await Promise.all([
 			interaction.channel.permissionOverwrites.edit(interaction.user, { 'ViewChannel': true }, `Ticket claimed by ${interaction.user.tag}`),
-			...ticket.category.staffRoles.map(role => interaction.channel.permissionOverwrites.edit(role, { 'ViewChannel': false }, `Ticket claimed by ${interaction.user.tag}`)),
+			...ticket.category.staffRoles.map(role => interaction.channel.permissionOverwrites.edit(role, { 'SendMessages': false }, `Ticket claimed by ${interaction.user.tag}`)),
 			this.client.prisma.ticket.update({
 				data: {
 					claimedBy: {
@@ -910,7 +910,7 @@ module.exports = class TicketManager {
 
 		await Promise.all([
 			interaction.channel.permissionOverwrites.delete(interaction.user, `Ticket released by ${interaction.user.tag}`),
-			...ticket.category.staffRoles.map(role => interaction.channel.permissionOverwrites.edit(role, { 'ViewChannel': true }, `Ticket released by ${interaction.user.tag}`)),
+			...ticket.category.staffRoles.map(role => interaction.channel.permissionOverwrites.edit(role, { 'SendMessages': true }, `Ticket released by ${interaction.user.tag}`)),
 			this.client.prisma.ticket.update({
 				data: { claimedBy: { disconnect: true } },
 				where: { id: interaction.channel.id },
