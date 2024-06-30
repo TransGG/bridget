@@ -14,6 +14,7 @@ module.exports = {
 	async useGuild(client, interaction, {
 		referencesMessage,
 		referencesTicketId,
+		referencesUser,
 		topic,
 	}) {
 		const settings = await client.prisma.guild.findUnique({
@@ -43,6 +44,7 @@ module.exports = {
 				interaction,
 				referencesMessage,
 				referencesTicketId,
+				referencesUser,
 				topic,
 			});
 		} else {

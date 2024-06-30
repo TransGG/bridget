@@ -147,6 +147,12 @@ commands:
       description: Create a new ticket
       name: new
       options:
+        user:
+          description: The user to open a ticket with
+          name: user
+        topic:
+          description: The topic to assign to the ticket
+          name: topic
         references:
           description: The number of a related ticket
           name: references

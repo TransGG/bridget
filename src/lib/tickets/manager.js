@@ -155,7 +155,7 @@ module.exports = class TicketManager {
 	 * @param {string?} [data.topic]
 	 */
 	async create({
-		categoryId, interaction, topic, referencesMessage, referencesTicketId,
+		categoryId, interaction, topic, referencesMessage, referencesTicketId, referencesUser,
 	}) {
 		categoryId = Number(categoryId);
 		const category = await this.getCategory(categoryId);
@@ -187,7 +187,7 @@ module.exports = class TicketManager {
 
 		/** @type {import("discord.js").Guild} */
 		const guild = this.client.guilds.cache.get(category.guild.id);
-		const member = interaction.member ?? await guild.members.fetch(interaction.user.id);
+		const member = referencesUser ?? interaction.member ?? await guild.members.fetch(interaction.user.id);
 		const getMessage = this.client.i18n.getLocale(category.guild.locale);
 
 		const rlKey = `ratelimits/guild-user:${category.guildId}-${interaction.user.id}`;
@@ -239,7 +239,7 @@ module.exports = class TicketManager {
 		if (totalCount >= category.totalLimit) return await sendError('category_full');
 
 		const memberCount = await this.getMemberCount(category.id, interaction.user.id);
-		if (memberCount >= category.memberLimit) {
+		if (memberCount >= category.memberLimit && !referencesUser) {
 			return await interaction.reply({
 				embeds: [
 					new ExtendedEmbedBuilder({
@@ -255,7 +255,7 @@ module.exports = class TicketManager {
 		}
 
 		const cooldown = await this.getCooldown(category.id, interaction.user.id);
-		if (cooldown) {
+		if (cooldown && !referencesUser) {
 			return await interaction.reply({
 				embeds: [
 					new ExtendedEmbedBuilder({
@@ -348,6 +348,7 @@ module.exports = class TicketManager {
 				interaction,
 				referencesMessage,
 				referencesTicketId,
+				referencesUser,
 				topic,
 			});
 		}
@@ -360,7 +361,7 @@ module.exports = class TicketManager {
 	 * @param {string?} [data.topic]
 	 */
 	async postQuestions({
-		action, categoryId, interaction, topic, referencesMessage, referencesTicketId,
+		action, categoryId, interaction, topic, referencesMessage, referencesTicketId, referencesUser,
 	}) {
 		const [, category] = await Promise.all([
 			interaction.deferReply({ ephemeral: true }),
@@ -524,7 +525,7 @@ module.exports = class TicketManager {
 		const sent = await channel.send({
 			components: components.components.length >= 1 ? [components] : [],
 			content: getMessage('ticket.opening_message.content', {
-				creator: interaction.user.toString(),
+				creator: referencesUser?.toString() ?? interaction.user.toString(),
 				staff: pings ? pings + ',' : '',
 			}),
 			embeds,
