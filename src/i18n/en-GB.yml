@@ -471,6 +471,12 @@ ticket:
       {creator} has created a new ticket
     fields:
       topic: Topic
+  references_user:
+    content: |
+      {staff}
+      {creator} has created a new ticket for {target}
+    fields:
+      topic: Topic
   references_message:
     description: References [a message]({url}) sent {timestamp} by {author}.
     title: ℹ️ Reference

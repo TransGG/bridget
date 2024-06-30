@@ -476,7 +476,7 @@ module.exports = class TicketManager {
 				new ExtendedEmbedBuilder()
 					.setColor(category.guild.primaryColour)
 					.setFields({
-						name: getMessage('ticket.opening_message.fields.topic'),
+						name: getMessage(`ticket.${referencesUser ? 'references_user' : 'opening_message'}.fields.topic`),
 						value: topic,
 					}),
 			);
@@ -522,14 +522,27 @@ module.exports = class TicketManager {
 		}
 
 		const pings = category.pingRoles.map(r => `<@&${r}>`).join(' ');
-		const sent = await channel.send({
-			components: components.components.length >= 1 ? [components] : [],
-			content: getMessage('ticket.opening_message.content', {
-				creator: referencesUser?.toString() ?? interaction.user.toString(),
-				staff: pings ? pings + ',' : '',
-			}),
-			embeds,
-		});
+		let sent;
+		if (referencesUser) {
+			sent = await channel.send({
+				components: components.components.length >= 1 ? [components] : [],
+				content: getMessage('ticket.references_user.content', {
+					creator: interaction.user.toString(),
+					target: referencesUser.toString(),
+					staff: pings ? pings + ',' : '',
+				}),
+				embeds,
+			});
+		} else {
+			sent = await channel.send({
+				components: components.components.length >= 1 ? [components] : [],
+				content: getMessage('ticket.opening_message.content', {
+					creator: interaction.user.toString(),
+					staff: pings ? pings + ',' : '',
+				}),
+				embeds,
+			});
+		}
 		await sent.pin({ reason: 'Ticket opening message' });
 		const pinned = channel.messages.cache.last();
 
