@@ -27,31 +27,13 @@ module.exports = class TranscriptSlashCommand extends SlashCommand {
 					type: ApplicationCommandOptionType.String,
 				},
 				{
-					autocomplete: true,
-					name: 'category',
-					required: false,
-					type: ApplicationCommandOptionType.String,
-				},
-				{
-					autocomplete: true,
-					name: 'channel',
-					required: false,
-					type: ApplicationCommandOptionType.String,
-				},
-				{
-					name: 'user',
+					name: 'member',
 					required: false,
 					type: ApplicationCommandOptionType.User,
 				},
-				{
-					autocomplete: true,
-					name: 'topic',
-					required: false,
-					type: ApplicationCommandOptionType.String
-				},
 			].map(option => {
 				option.descriptionLocalizations = client.i18n.getAllMessages(`commands.slash.${name}.options.${option.name}.description`);
-				option.description = client.i18n.getAllMessages(`commands.slash.${name}.options.${option.name}.description`)['en-GB'];
+				option.description = option.descriptionLocalizations['en-GB'];
 				option.nameLocalizations = client.i18n.getAllMessages(`commands.slash.${name}.options.${option.name}.name`);
 				return option;
 			}),

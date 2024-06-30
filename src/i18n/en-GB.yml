@@ -241,18 +241,9 @@ commands:
         description: Only staff members can read the transcripts of others' tickets.
         title: ❌ Error
       options:
-        user:
-          description: The user to search for tickets they were involved in
-          name: user
-        category:
-          description: The category of the ticket
-          name: category
-        channel:
-          description: The channel id of the ticket
-          name: channel
-        topic:
-          description: The topic of the ticket
-          name: topic
+        member:
+          description: The member to search for tickets of
+          name: member
         ticket:
           description: The ticket to get the transcript of
           name: ticket
