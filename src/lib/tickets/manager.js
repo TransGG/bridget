@@ -410,7 +410,7 @@ module.exports = class TicketManager {
 				},
 				{
 					allow,
-					id: creator.id,
+					id: referencesUser.id ?? creator.id,
 				},
 				...category.staffRoles.map(id => ({
 					allow,
@@ -419,7 +419,7 @@ module.exports = class TicketManager {
 			],
 			rateLimitPerUser: category.ratelimit,
 			reason: `${creator.user.tag} created a ticket`,
-			topic: `${creator}${topic?.length > 0 ? ` | ${topic}` : ''}`,
+			topic: `${referencesUser ?? creator}${topic?.length > 0 ? ` | ${topic}` : ''}`,
 		});
 
 		const needsStats = /{+\s?(avgResponseTime|avgResolutionTime)\s?}+/i.test(category.openingMessage);
