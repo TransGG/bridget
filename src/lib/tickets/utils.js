@@ -14,6 +14,7 @@ module.exports = {
 	async useGuild(client, interaction, {
 		referencesMessage,
 		referencesTicketId,
+		referencesUserId,
 		topic,
 	}) {
 		const settings = await client.prisma.guild.findUnique({
@@ -43,6 +44,7 @@ module.exports = {
 				interaction,
 				referencesMessage,
 				referencesTicketId,
+				referencesUserId,
 				topic,
 			});
 		} else {
@@ -55,6 +57,7 @@ module.exports = {
 									action: 'create',
 									referencesMessage,
 									referencesTicketId,
+									referencesUserId,
 									topic,
 								}))
 								.setPlaceholder(getMessage('menus.category.placeholder'))

@@ -14,6 +14,16 @@ module.exports = class NewSlashCommand extends SlashCommand {
 			nameLocalizations: client.i18n.getAllMessages(`commands.slash.${name}.name`),
 			options: [
 				{
+					name: 'user',
+					required: false,
+					type: ApplicationCommandOptionType.User,
+				},
+				{
+					name: 'topic',
+					required: false,
+					type: ApplicationCommandOptionType.String,
+				},
+				{
 					autocomplete: true,
 					name: 'references',
 					required: false,
@@ -33,6 +43,10 @@ module.exports = class NewSlashCommand extends SlashCommand {
 	 * @param {import("discord.js").ChatInputCommandInteraction} interaction
 	 */
 	async run(interaction) {
-		await useGuild(this.client, interaction, { referencesTicketId: interaction.options.getString('references', false) });
+		await useGuild(this.client, interaction, {
+			referencesTicketId: interaction.options.getString('references', false),
+			referencesUserId: interaction.options.getUser('user')?.id,
+			topic: interaction.options.getString('topic'),
+		});
 	}
 };
