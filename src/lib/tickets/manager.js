@@ -500,16 +500,6 @@ module.exports = class TicketManager {
 			);
 		}
 
-		if (category.guild.claimButton && category.claiming) {
-			components.addComponents(
-				new ButtonBuilder()
-					.setCustomId(JSON.stringify({ action: 'claim' }))
-					.setStyle(ButtonStyle.Secondary)
-					.setEmoji(getMessage('buttons.claim.emoji'))
-					.setLabel(getMessage('buttons.claim.text')),
-			);
-		}
-
 		if (category.guild.closeButton) {
 			components.addComponents(
 				new ButtonBuilder()
@@ -822,16 +812,6 @@ module.exports = class TicketManager {
 				);
 			}
 
-			if (ticket.guild.claimButton && ticket.category.claiming) {
-				components.addComponents(
-					new ButtonBuilder()
-						.setCustomId(JSON.stringify({ action: 'unclaim' }))
-						.setStyle(ButtonStyle.Secondary)
-						.setEmoji(getMessage('buttons.unclaim.emoji'))
-						.setLabel(getMessage('buttons.unclaim.text')),
-				);
-			}
-
 			if (ticket.guild.closeButton) {
 				components.addComponents(
 					new ButtonBuilder()
@@ -912,16 +892,6 @@ module.exports = class TicketManager {
 						.setStyle(ButtonStyle.Secondary)
 						.setEmoji(getMessage('buttons.edit.emoji'))
 						.setLabel(getMessage('buttons.edit.text')),
-				);
-			}
-
-			if (ticket.guild.claimButton && ticket.category.claiming) {
-				components.addComponents(
-					new ButtonBuilder()
-						.setCustomId(JSON.stringify({ action: 'claim' }))
-						.setStyle(ButtonStyle.Secondary)
-						.setEmoji(getMessage('buttons.claim.emoji'))
-						.setLabel(getMessage('buttons.claim.text')),
 				);
 			}
 
