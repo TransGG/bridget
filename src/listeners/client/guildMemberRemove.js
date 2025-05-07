@@ -26,7 +26,12 @@ module.exports = class extends Listener {
 		});
 
 		for (const ticket of tickets) {
-			await client.tickets.finallyClose(ticket.id, { reason: 'user left server' });
+			try {
+				const channel = await client.channels.fetch(ticket.id);
+				if (channel?.isTextBased()) channel.send("The user for this ticket left the server.")
+			} catch {
+				// Ignore errors when sending "user left" message
+			}
 		}
 	}
 };
