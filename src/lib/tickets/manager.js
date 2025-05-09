@@ -29,6 +29,7 @@ const {
 	encrypt,
 } = new Cryptr(process.env.ENCRYPTION_KEY);
 const { getSUID } = require('../logging');
+const { User } = require('discord.js');
 
 /**
  * @typedef {import('@prisma/client').Category &
@@ -155,10 +156,12 @@ module.exports = class TicketManager {
 	 * @param {string?} [data.topic]
 	 */
 	async create({
-		categoryId, interaction, topic, referencesMessage, referencesTicketId,
+		categoryId, interaction, topic, referencesMessage, referencesTicketId, referencesUserId,
 	}) {
 		categoryId = Number(categoryId);
 		const category = await this.getCategory(categoryId);
+
+		const referencesUser = await interaction.guild.members.fetch(referencesUserId);
 
 		if (!category) {
 			let settings;
@@ -187,7 +190,7 @@ module.exports = class TicketManager {
 
 		/** @type {import("discord.js").Guild} */
 		const guild = this.client.guilds.cache.get(category.guild.id);
-		const member = interaction.member ?? await guild.members.fetch(interaction.user.id);
+		const member = referencesUser ?? interaction.member ?? await guild.members.fetch(interaction.user.id);
 		const getMessage = this.client.i18n.getLocale(category.guild.locale);
 
 		const rlKey = `ratelimits/guild-user:${category.guildId}-${interaction.user.id}`;
@@ -239,7 +242,7 @@ module.exports = class TicketManager {
 		if (totalCount >= category.totalLimit) return await sendError('category_full');
 
 		const memberCount = await this.getMemberCount(category.id, interaction.user.id);
-		if (memberCount >= category.memberLimit) {
+		if (memberCount >= category.memberLimit && !referencesUser) {
 			return await interaction.reply({
 				embeds: [
 					new ExtendedEmbedBuilder({
@@ -255,7 +258,7 @@ module.exports = class TicketManager {
 		}
 
 		const cooldown = await this.getCooldown(category.id, interaction.user.id);
-		if (cooldown) {
+		if (cooldown && !referencesUser) {
 			return await interaction.reply({
 				embeds: [
 					new ExtendedEmbedBuilder({
@@ -348,6 +351,7 @@ module.exports = class TicketManager {
 				interaction,
 				referencesMessage,
 				referencesTicketId,
+				referencesUser,
 				topic,
 			});
 		}
@@ -360,7 +364,7 @@ module.exports = class TicketManager {
 	 * @param {string?} [data.topic]
 	 */
 	async postQuestions({
-		action, categoryId, interaction, topic, referencesMessage, referencesTicketId,
+		action, categoryId, interaction, topic, referencesMessage, referencesTicketId, referencesUser,
 	}) {
 		const [, category] = await Promise.all([
 			interaction.deferReply({ ephemeral: true }),
@@ -406,7 +410,7 @@ module.exports = class TicketManager {
 				},
 				{
 					allow,
-					id: creator.id,
+					id: referencesUser.id ?? creator.id,
 				},
 				...category.staffRoles.map(id => ({
 					allow,
@@ -415,7 +419,7 @@ module.exports = class TicketManager {
 			],
 			rateLimitPerUser: category.ratelimit,
 			reason: `${creator.user.tag} created a ticket`,
-			topic: `${creator}${topic?.length > 0 ? ` | ${topic}` : ''}`,
+			topic: `${referencesUser ?? creator}${topic?.length > 0 ? ` | ${topic}` : ''}`,
 		});
 
 		const needsStats = /{+\s?(avgResponseTime|avgResolutionTime)\s?}+/i.test(category.openingMessage);
@@ -475,7 +479,7 @@ module.exports = class TicketManager {
 				new ExtendedEmbedBuilder()
 					.setColor(category.guild.primaryColour)
 					.setFields({
-						name: getMessage('ticket.opening_message.fields.topic'),
+						name: getMessage(`ticket.${referencesUser ? 'references_user' : 'opening_message'}.fields.topic`),
 						value: topic,
 					}),
 			);
@@ -521,14 +525,27 @@ module.exports = class TicketManager {
 		}
 
 		const pings = category.pingRoles.map(r => `<@&${r}>`).join(' ');
-		const sent = await channel.send({
-			components: components.components.length >= 1 ? [components] : [],
-			content: getMessage('ticket.opening_message.content', {
-				creator: interaction.user.toString(),
-				staff: pings ? pings + ',' : '',
-			}),
-			embeds,
-		});
+		let sent;
+		if (referencesUser.id) {
+			sent = await channel.send({
+				components: components.components.length >= 1 ? [components] : [],
+				content: getMessage('ticket.references_user.content', {
+					creator: interaction.user.toString(),
+					target: referencesUser.toString(),
+					staff: pings ? pings + ',' : '',
+				}),
+				embeds,
+			});
+		} else {
+			sent = await channel.send({
+				components: components.components.length >= 1 ? [components] : [],
+				content: getMessage('ticket.opening_message.content', {
+					creator: interaction.user.toString(),
+					staff: pings ? pings + ',' : '',
+				}),
+				embeds,
+			});
+		}
 		await sent.pin({ reason: 'Ticket opening message' });
 		const pinned = channel.messages.cache.last();
 
@@ -622,8 +639,8 @@ module.exports = class TicketManager {
 			category: { connect: { id: categoryId } },
 			createdBy: {
 				connectOrCreate: {
-					create: { id: interaction.user.id },
-					where: { id: interaction.user.id },
+					create: { id: referencesUser?.id ?? interaction.user.id },
+					where: { id: referencesUser?.id ?? interaction.user.id },
 				},
 			},
 			guild: { connect: { id: category.guild.id } },
@@ -779,6 +796,7 @@ module.exports = class TicketManager {
 
 		if (!(await isStaff(interaction.guild, interaction.user.id))) { // if user is not staff
 			return await interaction.editReply({
+				ephemeral: true,
 				embeds: [
 					new ExtendedEmbedBuilder({
 						iconURL: interaction.guild.iconURL(),
@@ -793,7 +811,7 @@ module.exports = class TicketManager {
 
 		await Promise.all([
 			interaction.channel.permissionOverwrites.edit(interaction.user, { 'ViewChannel': true }, `Ticket claimed by ${interaction.user.tag}`),
-			...ticket.category.staffRoles.map(role => interaction.channel.permissionOverwrites.edit(role, { 'ViewChannel': false }, `Ticket claimed by ${interaction.user.tag}`)),
+			...ticket.category.staffRoles.map(role => interaction.channel.permissionOverwrites.edit(role, { 'SendMessages': false }, `Ticket claimed by ${interaction.user.tag}`)),
 			this.client.prisma.ticket.update({
 				data: {
 					claimedBy: {
@@ -893,7 +911,7 @@ module.exports = class TicketManager {
 
 		await Promise.all([
 			interaction.channel.permissionOverwrites.delete(interaction.user, `Ticket released by ${interaction.user.tag}`),
-			...ticket.category.staffRoles.map(role => interaction.channel.permissionOverwrites.edit(role, { 'ViewChannel': true }, `Ticket released by ${interaction.user.tag}`)),
+			...ticket.category.staffRoles.map(role => interaction.channel.permissionOverwrites.edit(role, { 'SendMessages': true }, `Ticket released by ${interaction.user.tag}`)),
 			this.client.prisma.ticket.update({
 				data: { claimedBy: { disconnect: true } },
 				where: { id: interaction.channel.id },
@@ -1051,8 +1069,11 @@ module.exports = class TicketManager {
 
 		// not showing feedback, so send the close request
 
-		// defer asap
-		await interaction.deferReply();
+		// If we defer, we can't actually mention the user (I may be wrong)
+		await interaction.reply({
+			content: `<@${ticket.createdById}>`,
+			allowedMentions: { users: [ticket.createdById] },
+		});
 
 		// if the creator isn't in the guild , close the ticket immediately
 		// (although leaving should cause the ticket to be closed anyway)

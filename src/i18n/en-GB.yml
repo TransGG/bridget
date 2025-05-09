@@ -147,6 +147,15 @@ commands:
       description: Create a new ticket
       name: new
       options:
+        category:
+          description: The category to create the ticket in
+          name: category
+        user:
+          description: The user to open a ticket with
+          name: user
+        topic:
+          description: The topic to assign to the ticket
+          name: topic
         references:
           description: The number of a related ticket
           name: references
@@ -454,6 +463,12 @@ ticket:
     content: |
       {staff}
       {creator} has created a new ticket
+    fields:
+      topic: Topic
+  references_user:
+    content: |
+      {staff}
+      {creator} has created a new ticket for {target}
     fields:
       topic: Topic
   references_message:
