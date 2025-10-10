@@ -1,6 +1,6 @@
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-33-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-40-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 ## Contributors ✨
@@ -54,6 +54,15 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/billy99816609"><img src="https://avatars.githubusercontent.com/u/54208828?v=4?s=100" width="100px;" alt="billy99816609"/><br /><sub><b>billy99816609</b></sub></a><br /><a href="#translation-billy99816609" title="Translation">🌍</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Umeaboy"><img src="https://avatars.githubusercontent.com/u/714473?v=4?s=100" width="100px;" alt="Kristoffer Grundström"/><br /><sub><b>Kristoffer Grundström</b></sub></a><br /><a href="#translation-Umeaboy" title="Translation">🌍</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://zukrein.xyz"><img src="https://avatars.githubusercontent.com/u/73394120?v=4?s=100" width="100px;" alt="Arda Samed Çelik"/><br /><sub><b>Arda Samed Çelik</b></sub></a><br /><a href="#translation-zukreindev" title="Translation">🌍</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/creeperita09"><img src="https://avatars.githubusercontent.com/u/97898994?v=4?s=100" width="100px;" alt="creeperita09"/><br /><sub><b>creeperita09</b></sub></a><br /><a href="#translation-creeperita09" title="Translation">🌍</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Luzifix"><img src="https://avatars.githubusercontent.com/u/7042325?v=4?s=100" width="100px;" alt="Luzifix"/><br /><sub><b>Luzifix</b></sub></a><br /><a href="https://github.com/discord-tickets/bot/issues?q=author%3ALuzifix" title="Bug reports">🐛</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/DominicTheD3v"><img src="https://avatars.githubusercontent.com/u/119626487?v=4?s=100" width="100px;" alt="DominicTheD3v"/><br /><sub><b>DominicTheD3v</b></sub></a><br /><a href="https://github.com/discord-tickets/bot/issues?q=author%3ADominicTheD3v" title="Bug reports">🐛</a> <a href="https://github.com/discord-tickets/bot/commits?author=DominicTheD3v" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ari-party"><img src="https://avatars.githubusercontent.com/u/49074962?v=4?s=100" width="100px;" alt="ari"/><br /><sub><b>ari</b></sub></a><br /><a href="https://github.com/discord-tickets/bot/commits?author=ari-party" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/olebohmbach"><img src="https://avatars.githubusercontent.com/u/77053238?v=4?s=100" width="100px;" alt="Ole"/><br /><sub><b>Ole</b></sub></a><br /><a href="https://github.com/discord-tickets/bot/commits?author=olebohmbach" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/erdnaxe"><img src="https://avatars.githubusercontent.com/u/2663216?v=4?s=100" width="100px;" alt="erdnaxe"/><br /><sub><b>erdnaxe</b></sub></a><br /><a href="https://github.com/discord-tickets/bot/commits?author=erdnaxe" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/LeonTheDev-io"><img src="https://avatars.githubusercontent.com/u/82466943?v=4?s=100" width="100px;" alt="Leon"/><br /><sub><b>Leon</b></sub></a><br /><a href="https://github.com/discord-tickets/bot/commits?author=LeonTheDev-io" title="Documentation">📖</a> <a href="https://github.com/discord-tickets/bot/commits?author=LeonTheDev-io" title="Code">💻</a> <a href="#translation-LeonTheDev-io" title="Translation">🌍</a> <a href="https://github.com/discord-tickets/bot/issues?q=author%3ALeonTheDev-io" title="Bug reports">🐛</a></td>
     </tr>
   </tbody>
 </table>

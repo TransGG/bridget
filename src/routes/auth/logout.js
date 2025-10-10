@@ -1,5 +1,3 @@
-const { domain } = require('../../lib/http');
-
 module.exports.get = fastify => ({
 	handler: async function (req, res) {
 		const { accessToken } = req.user;
@@ -15,12 +13,19 @@ module.exports.get = fastify => ({
 		});
 
 		res.clearCookie('token', {
-			domain,
 			httpOnly: true,
 			path: '/',
-			sameSite: 'Lax',
+			sameSite: 'Strict',
 			secure: false,
-		}).send('The token has been revoked.');
+		});
+		res.header('Content-Type', 'text/html');
+		return res.send(`
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="refresh" content="0; url='/'"></head>
+<body></body>
+</html>
+`);
 	},
 	onRequest: [fastify.authenticate],
 });

@@ -1,19 +1,13 @@
 const { Listener } = require('@eartharoid/dbf');
-const {
-	getAvgResolutionTime,
-	getAvgResponseTime,
-} = require('../../lib/stats');
 const ms = require('ms');
 const sync = require('../../lib/sync');
 const checkForUpdates = require('../../lib/updates');
-const { isStaff } = require('../../lib/users');
 const {
-	ActionRowBuilder,
-	ButtonBuilder,
-	ButtonStyle,
-} = require('discord.js');
-const ExtendedEmbedBuilder = require('../../lib/embed');
-const { sendToHouston } = require('../../lib/stats');
+	getAverageTimes,
+	getAverageRating,
+	sendToHouston,
+} = require('../../lib/stats');
+const handleStaleTickets = require('../../lib/stale');
 
 module.exports = class extends Listener {
 	constructor(client, options) {
@@ -33,6 +27,8 @@ module.exports = class extends Listener {
 		process.title = 'tickets';
 		client.log.success('Connected to Discord as "%s" over %d shards', client.user.tag, client.ws.shards.size);
 
+		await client.initAfterLogin();
+
 		// fill cache
 		await sync(client);
 
@@ -43,9 +39,10 @@ module.exports = class extends Listener {
 				.catch(client.log.error);
 		}
 
+		await client.application.fetch();
 		if (process.env.PUBLIC_BOT === 'true' && !client.application.botPublic) {
 			client.log.warn('The `PUBLIC_BOT` environment variable is set to `true`, but the bot is not public.');
-		} else if (process.env.PUBLIC_BOT === 'false' && client.application.botPublic) {
+		} else if (process.env.PUBLIC_BOT !== 'true' && client.application.botPublic) {
 			client.log.warn('Your bot is public, but public features are disabled. Set the `PUBLIC_BOT` environment variable to `true`, or make your bot private.');
 		}
 
@@ -56,6 +53,7 @@ module.exports = class extends Listener {
 		if (client.config.presence.activities?.length > 0) {
 			let next = 0;
 			const setPresence = async () => {
+				client.log.verbose.cron('Updating presence');
 				const cacheKey = 'cache/presence';
 				let cached = await client.keyv.get(cacheKey);
 				if (!cached) {
@@ -63,14 +61,23 @@ module.exports = class extends Listener {
 						select: {
 							closedAt: true,
 							createdAt: true,
+							feedback: { select: { rating: true } },
 							firstResponseAt: true,
 						},
 					});
-					const closedTicketsWithResponse = tickets.filter(t => t.firstResponseAt && t.closedAt);
 					const closedTickets = tickets.filter(t => t.closedAt);
+					const closedTicketsWithResponse = closedTickets.filter(t => t.firstResponseAt);
+					const {
+						avgResolutionTime,
+						avgResponseTime,
+					} = await getAverageTimes(closedTicketsWithResponse);
+					const avgRating = await getAverageRating(closedTickets);
+
 					cached = {
-						avgResolutionTime: ms(getAvgResolutionTime(closedTicketsWithResponse)),
-						avgResponseTime: ms(getAvgResponseTime(closedTicketsWithResponse)),
+						avgRating: avgRating.toFixed(1),
+						avgResolutionTime: ms(avgResolutionTime),
+						avgResponseTime: ms(avgResponseTime),
+						guilds: client.guilds.cache.size,
 						openTickets: tickets.length - closedTickets.length,
 						totalTickets: tickets.length,
 					};
@@ -80,6 +87,8 @@ module.exports = class extends Listener {
 				activity.name = activity.name
 					.replace(/{+avgResolutionTime}+/gi, cached.avgResolutionTime)
 					.replace(/{+avgResponseTime}+/gi, cached.avgResponseTime)
+					.replace(/{+avgRating}+/gi, cached.avgRating)
+					.replace(/{+guilds}+/gi, cached.guilds)
 					.replace(/{+openTickets}+/gi, cached.openTickets)
 					.replace(/{+totalTickets}+/gi, cached.totalTickets);
 				client.user.setPresence({
@@ -106,101 +115,13 @@ module.exports = class extends Listener {
 			setInterval(() => checkForUpdates(client), ms('1w'));
 		}
 
-		// send inactivity warnings and close stale tickets
-		const staleInterval = ms('5m');
-		setInterval(async () => {
-			// close stale tickets
-			for (const [ticketId, $] of client.tickets.$stale) {
-				const autoCloseAfter = $.closeAt - $.staleSince;
-				const halfway = $.closeAt - (autoCloseAfter / 2);
-				if (Date.now() >= halfway && Date.now() < halfway + staleInterval) {
-					const channel = client.channels.cache.get(ticketId);
-					if (!channel) continue;
-					const { guild } = await client.prisma.ticket.findUnique({
-						select: { guild: true },
-						where: { id: ticketId },
-					});
-					const getMessage = client.i18n.getLocale(guild.locale);
-					await channel.send({
-						embeds: [
-							new ExtendedEmbedBuilder()
-								.setColor(guild.primaryColour)
-								.setTitle(getMessage('ticket.closing_soon.title'))
-								.setDescription(getMessage('ticket.closing_soon.description', { timestamp: Math.floor($.closeAt / 1000) })),
-						],
-					});
-				} else if ($.closeAt < Date.now()) {
-					client.tickets.finallyClose(ticketId, $);
-				}
-			}
-
-			const guilds = await client.prisma.guild.findMany({
-				include: {
-					tickets: {
-						include: { category: true },
-						where: { open: true },
-					},
-				},
-				// where: { staleAfter: { not: null } },
-				where: { staleAfter: { gte: staleInterval } },
-			});
-
-			// set inactive tickets as stale
-			for (const guild of guilds) {
-				for (const ticket of guild.tickets) {
-					if (client.tickets.$stale.has(ticket.id)) continue;
-					if (ticket.lastMessageAt && Date.now() - ticket.lastMessageAt > guild.staleAfter) {
-					/** @type {import("discord.js").TextChannel} */
-						const channel = client.channels.cache.get(ticket.id);
-						const messages = (await channel.messages.fetch({ limit: 5 })).filter(m => m.author.id !== client.user.id);
-						let ping = '';
-
-						if (messages.size > 0) {
-							const lastMessage =  messages.first();
-							const staff = await isStaff(channel.guild, lastMessage.author.id);
-							if (staff) ping = `<@${ticket.createdById}>`;
-							else ping = ticket.category.pingRoles.map(r => `<@&${r}>`).join(' ');
-						}
-
-						const getMessage = client.i18n.getLocale(guild.locale);
-						const closeComamnd = client.application.commands.cache.find(c => c.name === 'close');
-						const sent = await channel.send({
-							components: [
-								new ActionRowBuilder()
-									.addComponents(
-										new ButtonBuilder()
-											.setCustomId(JSON.stringify({ action: 'close' }))
-											.setStyle(ButtonStyle.Danger)
-											.setEmoji(getMessage('buttons.close.emoji'))
-											.setLabel(getMessage('buttons.close.text')),
-									),
-							],
-							content: ping,
-							embeds: [
-								new ExtendedEmbedBuilder({
-									iconURL: channel.guild.iconURL(),
-									text: guild.footer,
-								})
-									.setColor(guild.primaryColour)
-									.setTitle(getMessage('ticket.inactive.title'))
-									.setDescription(getMessage('ticket.inactive.description', {
-										close: `</${closeComamnd.name}:${closeComamnd.id}>`,
-										timestamp: Math.floor(ticket.lastMessageAt.getTime() / 1000),
-									})),
-							],
-						});
-
-						client.tickets.$stale.set(ticket.id, {
-							closeAt: guild.autoClose ? Date.now() + guild.autoClose : null,
-							closedBy: null,
-							message: sent,
-							messages: 0,
-							reason: 'inactivity',
-							staleSince: Date.now(),
-						});
-					}
-				}
-			}
-		}, staleInterval);
+		if (process.env.PUBLIC_BOT === 'true') {
+			client.log.notice('Inactivity warnings and auto-close features are disabled');
+			client.log.warn('Unset PUBLIC_BOT to re-enable stale ticket handling');
+		} else {
+			// send inactivity warnings and close stale tickets
+			const staleInterval = ms('15m');
+			setInterval(() => handleStaleTickets(client, staleInterval), staleInterval);
+		}
 	}
 };

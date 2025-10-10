@@ -1,18 +1,27 @@
+/* eslint-disable no-underscore-dangle */
+
 const { version } = require('../../package.json');
+const { md5 } = require('./misc');
 const {
-	md5,
-	msToMins,
-} = require('./misc');
+	pools,
+	quickPool,
+} = require('./threads');
 
-module.exports.getAvgResolutionTime = tickets => (tickets.reduce((total, ticket) => total + (ticket.closedAt - ticket.createdAt), 0) || 1) / Math.max(tickets.length, 1);
+const { stats } = pools;
 
-module.exports.getAvgResponseTime = tickets => (tickets.reduce((total, ticket) => total + (ticket.firstResponseAt - ticket.createdAt), 0) || 1) / Math.max(tickets.length, 1);
+const getAverageRating = closedTickets => stats.queue(async w => await w.getAvgRating(closedTickets));
+
+const getAverageTimes = closedTickets => stats.queue(async w => ({
+	avgResolutionTime: await w.getAvgResolutionTime(closedTickets),
+	avgResponseTime: await w.getAvgResponseTime(closedTickets),
+}));
 
 /**
- *
+ * Report stats to Houston
  * @param {import("../client")} client
  */
-module.exports.sendToHouston = async client => {
+async function sendToHouston(client) {
+	client.log.info.cron('Preparing Houston report');
 	const guilds = await client.prisma.guild.findMany({
 		include: {
 			categories: { include: { _count: { select: { questions: true } } } },
@@ -26,46 +35,35 @@ module.exports.sendToHouston = async client => {
 			},
 		},
 	});
-	const users = await client.prisma.user.findMany({ select: { messageCount: true } });
+	const users = await client.prisma.user.aggregate({
+		_count: true,
+		_sum: { messageCount: true },
+	});
+	const messages = users._sum.messageCount;
 	const stats = {
-		activated_users: users.length,
+		activated_users: users._count,
 		arch: process.arch,
 		database: process.env.DB_PROVIDER,
-		guilds: guilds.filter(guild => {
-			if (!client.guilds.cache.has(guild.id)) {
-				client.log.warn('Guild %s is in the database but is not cached and might not exist. It will be excluded from the stats report.', guild.id);
-				return false;
-			}
-			return true;
-		}).map(guild => {
-			const closedTickets = guild.tickets.filter(t => t.firstResponseAt && t.closedAt);
-			return {
-				avg_resolution_time: msToMins(closedTickets.reduce((total, ticket) => total + (ticket.closedAt - ticket.createdAt), 0) ?? 1 / closedTickets.length),
-				avg_response_time: msToMins(closedTickets.reduce((total, ticket) => total + (ticket.firstResponseAt - ticket.createdAt), 0) ?? 1 / closedTickets.length),
-				categories: guild.categories.length,
-				features: {
-					auto_close: msToMins(guild.autoClose),
-					claiming: guild.categories.filter(c => c.claiming).length,
-					feedback: guild.categories.filter(c => c.enableFeedback).length,
-					logs: !!guild.logChannel,
-					// eslint-disable-next-line no-underscore-dangle
-					questions: guild.categories.filter(c => c._count.questions).length,
-					tags: guild.tags.length,
-					tags_regex: guild.tags.filter(t => t.regex).length,
-					topic: guild.categories.filter(c => c.requireTopic).length,
-				},
-				id: md5(guild.id),
-				locale: guild.locale,
-				members: client.guilds.cache.get(guild.id).memberCount,
-				messages: users.reduce((total, user) => total + user.messageCount, 0), // global not guild, don't count archivedMessage table rows, they can be deleted
-				tickets: guild.tickets.length,
-			};
-		}),
+		// this gets a dedicated pool so it doesn't block other stats uses
+		guilds: await quickPool(.25, 'stats', pool => Promise.all(
+			guilds
+				.filter(guild => client.guilds.cache.has(guild.id))
+				.map(guild => {
+					guild.members = client.guilds.cache.get(guild.id).memberCount;
+					return pool.queue(w => w.aggregateGuildForHouston(guild, messages));
+				}),
+		)),
 		id: md5(client.user.id),
 		node: process.version,
 		os: process.platform,
 		version,
 	};
+	const delta = guilds.length - stats.guilds.length;
+
+	if (delta !== 0) {
+		client.log.warn('%d guilds are not cached and were excluded from the stats report', delta);
+	}
+
 	try {
 		client.log.verbose('Reporting to Houston:', stats);
 		const res = await fetch('https://stats.discordtickets.app/api/v4/houston', {
@@ -86,4 +84,10 @@ module.exports.sendToHouston = async client => {
 		}
 		client.log.debug(res);
 	}
+};
+
+module.exports = {
+	getAverageRating,
+	getAverageTimes,
+	sendToHouston,
 };

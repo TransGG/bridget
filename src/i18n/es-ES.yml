@@ -256,6 +256,9 @@ buttons:
   unclaim:
     emoji: ♻️
     text: Liberar
+  transcript:
+    text: Transcripción
+    emoji: 📄
 ticket:
   working_hours:
     today:
@@ -427,8 +430,6 @@ misc:
     title: ⚠️ Algo ha salido mal
 dm:
   closed:
-    archived: Para ver los mensajes archivados, utiliza el comando `/transcript` en
-      **{guild}**.
     fields:
       closed:
         name: Se cerró a las

@@ -23,6 +23,9 @@ buttons:
   reject_close_request:
     emoji: ✖️
     text: Reject
+  transcript:
+    emoji: 📄
+    text: Transcript
   unclaim:
     emoji: ♻️
     text: Release
@@ -187,6 +190,28 @@ commands:
       success:
         description: "{member} has been removed from {ticket}."
         title: ✅ Removed
+    rename:
+      description: Rename a ticket channel
+      error: There was an error while renaming the channel.
+      invalid:
+        description: The name must be between 1 and 100 characters in length.
+        title: Invalid name
+      name: rename
+      not_staff:
+        description: Only staff members can rename tickets.
+        title: ❌ Error
+      options:
+        name:
+          description: The new name for the ticket channel.
+          name: name
+      ratelimited:
+        description:
+          You have already renamed this channel twice within the last 10
+          minutes. Please wait before trying again.
+        title: Rate Limit Reached
+      success:
+        description: The ticket channel has been renamed to `{name}`.
+        title: Channel renamed
     tag:
       description: Use a tag
       name: tag
@@ -261,11 +286,12 @@ commands:
         title: ✅ Prompt sent
 dm:
   closed:
-    archived: Use the `/transcript` command in **{guild}** to view the archived messages.
     fields:
       closed:
         name: Closed at
-        value: "{timestamp} (after {duration})"
+        value: |-
+          {timestamp}
+          (after {duration})
       closed_by: Closed by
       created: Created at
       feedback: Your feedback
@@ -371,6 +397,14 @@ misc:
   not_ticket:
     description: You can only use this command in tickets.
     title: ❌ This isn't a ticket channel
+  permissions_error:
+    description: Sorry, the operation failed due to insufficient permissions.
+    fields:
+      for_admins:
+        name: For server administrators
+        value: >
+          [Click here]({url}) for resolution instructions.
+    title: ⚠️ Something went wrong
   ratelimited:
     description: Try again in a few seconds.
     title: 🐢 Please slow down
@@ -380,8 +414,8 @@ misc:
       for_admins:
         name: For server administrators
         value: >
-          An invalid user or role was supplied, which usually means a staff role has been deleted.
-          [Click here]({url}) for resolution instructions.
+          An invalid user or role was supplied, which usually means a staff role
+          has been deleted. [Click here]({url}) for resolution instructions.
     title: ⚠️ Something went wrong
   unknown_category:
     description: Please try a different category.

@@ -46,7 +46,7 @@ module.exports.handleInteractionError = async event => {
 		embeds: [],
 	};
 
-	if (/Supplied parameter is not a User nor a Role/.test(error.message)) {
+	if (error.code === 10011 || (error.code === 'Invalid Type' && /Role/.test(error.message))) {
 		data.embeds.push(
 			new EmbedBuilder()
 				.setColor('Orange')
@@ -56,6 +56,19 @@ module.exports.handleInteractionError = async event => {
 					{
 						name: getMessage('misc.role_error.fields.for_admins.name'),
 						value: getMessage('misc.role_error.fields.for_admins.value', { url: 'https://discordtickets.app/self-hosting/troubleshooting/#invalid-user-or-role' }),
+					},
+				]),
+		);
+	} else if (/Missing (Access|Permissions)/.test(error.message)) {
+		data.embeds.push(
+			new EmbedBuilder()
+				.setColor('Orange')
+				.setTitle(getMessage('misc.permissions_error.title'))
+				.setDescription(getMessage('misc.permissions_error.description'))
+				.addFields([
+					{
+						name: getMessage('misc.permissions_error.fields.for_admins.name'),
+						value: getMessage('misc.permissions_error.fields.for_admins.value', { url: 'https://discordtickets.app/self-hosting/troubleshooting/#missing-permissions' }),
 					},
 				]),
 		);

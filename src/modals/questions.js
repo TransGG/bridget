@@ -1,12 +1,13 @@
 const { Modal } = require('@eartharoid/dbf');
-const { EmbedBuilder } = require('discord.js');
+const {
+	EmbedBuilder, MessageFlags,
+} = require('discord.js');
 const ExtendedEmbedBuilder = require('../lib/embed');
 const { logTicketEvent } = require('../lib/logging');
-const Cryptr = require('cryptr');
-const {
-	encrypt,
-	decrypt,
-} = new Cryptr(process.env.ENCRYPTION_KEY);
+const { pools } = require('../lib/threads');
+const { cleanCodeBlockContent } = require('discord.js');
+
+const { crypto } = pools;
 
 module.exports = class QuestionsModal extends Modal {
 	constructor(client, options) {
@@ -26,7 +27,7 @@ module.exports = class QuestionsModal extends Modal {
 		const client = this.client;
 
 		if (id.edit) {
-			await interaction.deferReply({ ephemeral: true });
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 			const { category } = await client.prisma.ticket.findUnique({
 				select: { category: { select: { customTopic: true } } },
@@ -38,6 +39,7 @@ module.exports = class QuestionsModal extends Modal {
 					select: {
 						footer: true,
 						locale: true,
+						primaryColour: true,
 						successColour: true,
 					},
 				},
@@ -50,6 +52,16 @@ module.exports = class QuestionsModal extends Modal {
 				where: { id: interaction.channel.id },
 			});
 
+			const plainTextAnswers = await Promise.all(
+				original.questionAnswers
+					.map(async answer => ({
+						after: interaction.fields.getTextInputValue(String(answer.id)),
+						before: answer.value ? await crypto.queue(w => w.decrypt(answer.value)) : '',
+						id: answer.id,
+						question: answer.question,
+					})),
+			);
+
 			let topic;
 			if (category.customTopic) {
 				const customTopicAnswer = original.questionAnswers.find(a => a.question.id === category.customTopic);
@@ -60,12 +72,15 @@ module.exports = class QuestionsModal extends Modal {
 			const ticket = await client.prisma.ticket.update({
 				data: {
 					questionAnswers: {
-						update: interaction.fields.fields.map(f => ({
-							data: { value: f.value ? encrypt(f.value) : '' },
-							where: { id: Number(f.customId) },
-						})),
+						update: await Promise.all(
+							interaction.fields.fields
+								.map(async f => ({
+									data: { value: f.value ? await crypto.queue(w => w.encrypt(f.value)) : '' },
+									where: { id: Number(f.customId) },
+								})),
+						),
 					},
-					topic: topic ? encrypt(topic) : null,
+					topic: topic ? await crypto.queue(w => w.encrypt(topic)) : null,
 				},
 				select,
 				where: { id: interaction.channel.id },
@@ -79,10 +94,10 @@ module.exports = class QuestionsModal extends Modal {
 				const embeds = [...opening.embeds];
 				embeds[1] = new EmbedBuilder(embeds[1].data)
 					.setFields(
-						ticket.questionAnswers
+						plainTextAnswers
 							.map(a => ({
 								name: a.question.label,
-								value: a.value ? decrypt(a.value) : getMessage('ticket.answers.no_value'),
+								value: a.after || getMessage('ticket.answers.no_value'),
 							})),
 					);
 				await opening.edit({ embeds });
@@ -100,21 +115,38 @@ module.exports = class QuestionsModal extends Modal {
 				],
 			});
 
-			/** @param {ticket} ticket */
-			const makeDiff = ticket => {
-				const diff = {};
-				ticket.questionAnswers.forEach(a => {
-					diff[a.question.label] = a.value ? decrypt(a.value) : getMessage('ticket.answers.no_value');
-				});
-				return diff;
+			const diff = {
+				original: {},
+				updated: {},
 			};
+			const inlineDiffEmbeds = [];
+
+			for (const answer of plainTextAnswers) {
+				diff.original[answer.question.label] = answer.before || getMessage('ticket.answers.no_value');
+				diff.updated[answer.question.label] = answer.after || getMessage('ticket.answers.no_value');
+				if (answer.before !== answer.after) {
+					const from = answer.before ? answer.before.replace(/^/gm, '- ') + '\n' : '';
+					const to = answer.after ? answer.after.replace(/^/gm, '+ ') + '\n' : '';
+					inlineDiffEmbeds.push(
+						new EmbedBuilder()
+							.setColor(ticket.guild.primaryColour)
+							.setAuthor({
+								iconURL: interaction.member.displayAvatarURL(),
+								name: interaction.user.username,
+							})
+							.setTitle(answer.question.label)
+							.setDescription(`\`\`\`diff\n${cleanCodeBlockContent(from + to)}\n\`\`\``),
+					);
+				}
+			}
+
+			if (inlineDiffEmbeds.length) {
+				await interaction.followUp({ embeds: inlineDiffEmbeds });
+			}
 
 			logTicketEvent(this.client, {
 				action: 'update',
-				diff: {
-					original: makeDiff(original),
-					updated: makeDiff(ticket),
-				},
+				diff,
 				target: {
 					id: ticket.id,
 					name: `<#${ticket.id}>`,

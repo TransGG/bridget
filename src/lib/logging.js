@@ -134,7 +134,7 @@ async function logAdminEvent(client, {
  * @param {string} details.action
 */
 async function logTicketEvent(client, {
-	userId, action, target, diff,
+	userId, action, target, diff, payload,
 }) {
 	const ticket = await client.tickets.getTicket(target.id);
 	if (!ticket) return;
@@ -170,6 +170,7 @@ async function logTicketEvent(client, {
 					name: getMessage('log.ticket.ticket'),
 					value: target.name ? `${target.name} (\`${target.id}\`)` : target.id,
 				},
+				...payload?.fields ?? [],
 			]),
 	];
 
@@ -182,7 +183,10 @@ async function logTicketEvent(client, {
 		);
 	}
 
-	return await channel.send({ embeds });
+	return await channel.send({
+		components: payload?.components ?? [],
+		embeds,
+	});
 }
 
 /**
